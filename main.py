@@ -7,10 +7,12 @@ import ctypes
 import sdl2
 
 
-WIDTH = 1000
-HIGHT = 600
 
+WIDTH = 800
+HIGHT = 800
+Tloc = None
 shaderProgram = None
+TEXT = None
 VAO = None
 VBO = None
 EBO = None
@@ -19,13 +21,14 @@ def init():
     global VAO
     global VBO
     global EBO
+    global Tloc 
 
 
     vertices = (
-            0.5, -0.5,
-            -0.5, -0.5,
-            0.5,  0.5,
-            -0.5,  0.5
+            0.5, -0.5,1.0,0.0,
+            -0.5, -0.5,0.0,0.0,
+            0.5,  0.5,1.0,1.0,
+            -0.5,  0.5,0.0,1.0,
         )
     vertices = np.array(vertices, dtype=np.float32)
     boxIndex=  np.array([0,1,2,1,3,2],dtype=np.uint32)
@@ -37,30 +40,24 @@ def init():
     glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
 
     glEnableVertexAttribArray(0)
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 8, ctypes.c_void_p(0))
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 16, ctypes.c_void_p(0))
     
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, boxIndex.nbytes, boxIndex, GL_STATIC_DRAW)
 
     shaderProgram = createShader("shaders/vertex.txt", "shaders/fragment.txt")
+    glUseProgram(shaderProgram)
+    Tloc = glGetUniformLocation(shaderProgram, "translation")
+    glUniform3fv(Tloc,1,[0,0,np.pi/4])
+
+
+    TEXT = createTexture("images/test1.png")
+    glBindTexture(GL_TEXTURE_2D, TEXT)
 
     glBindVertexArray(0)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
-
-
-
-   
-
-    
-
-
- 
-
-
-
-
 
 
 
@@ -86,7 +83,40 @@ def render():
     glUseProgram(shaderProgram)
 
     glBindVertexArray(VAO)
+    glUniform3fv(Tloc,1,[0,0,0])
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT,None)
+    # glUniform3fv(Tloc,1,[1,0,np.pi/4])
+    # glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT,None)
+    # glUniform3fv(Tloc,1,[0,-0.3,np.pi/4])
+    # glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT,None)
+    # glUniform3fv(Tloc,1,[0,1,np.pi/4])
+    # glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT,None)
+
+    
+
+def createTexture(path, color=None):
+    im = Image.open(path).transpose( Image.FLIP_TOP_BOTTOM )
+    w,h = im.size
+    if color != None:
+        c = Image.new("RGBA",[w,h],color)
+        im =ImageChops.multiply(im,c)
+    imdata = bytes(im.convert("RGBA").tobytes())
+
+
+    texname = glGenTextures(1)
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT,1)
+    glBindTexture(GL_TEXTURE_2D, texname)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+    GL_RGBA, GL_UNSIGNED_BYTE, imdata)
+    glGenerateMipmap(GL_TEXTURE_2D)
+
+    return texname
+
 
 def main():
     if sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO) != 0:
@@ -114,13 +144,15 @@ def main():
     # glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
 
-
+    render()
+    sdl2.SDL_GL_SwapWindow(window)
+    render()
 
     while running:
         while sdl2.SDL_PollEvent(ctypes.byref(event)) != 0:
             if event.type == sdl2.SDL_QUIT:
                 running = False
-        render()
+
         sdl2.SDL_GL_SwapWindow(window)
         sdl2.SDL_Delay(10)
         

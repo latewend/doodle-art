@@ -1,12 +1,30 @@
 #version 330 core
 
-layout(location = 0) in vec2 pos;
-//layout(location = 1) in vec3 vColor;
 
-//out vec3 inColor;
+layout(location = 0) in vec4 pos;
+
+
+uniform vec3 translation; 
+
+out vec2 uvCord;
+
+// form https://gist.github.com/yiwenl/3f804e80d0930e34a0b33359259b556c
+vec2 rotate(vec2 v, float a) {
+	float s = sin(a);
+	float c = cos(a);
+	mat2 m = mat2(c, s, -s, c);
+	return m * v;
+}
+
+vec2 translate(vec2 v){
+    return rotate(v, translation.z) + translation.xy;
+}
+
 
 void main()
 {   
-    gl_Position = vec4(pos,-1,1);
-    //inColor = vColor;
+	uvCord = pos.zw;
+    gl_Position = vec4(translate(pos.xy),0,1);
 }
+
+
